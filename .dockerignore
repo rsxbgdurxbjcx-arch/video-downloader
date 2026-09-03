@@ -1,0 +1,9 @@
+.git
+.gitignore
+.env
+*.log
+*.md
+data/
+downloads/
+cookies_store/
+certs/

@@ -1,0 +1,59 @@
+# docker-compose.yml —— video-downloader
+# 默认端口 80（HTTP 默认端口）：
+#   - 域名访问（Cloudflare 代理 / 直连）无需输入端口，如 http://video.example.com 或 http://服务器IP
+#   - Cloudflare 橙色云朵代理：回源 80 端口（Cloudflare 边缘默认支持 80/443）
+# 如需改回 8080 等其他端口：编辑下方 ports 与 APP_ADDR 两处（并同步 bootstrap.sh 的 PORT 参数）。
+services:
+  video-downloader:
+    build: .
+    container_name: video-downloader
+    restart: unless-stopped
+    depends_on:
+      - redis
+    ports:
+      - "80:80"              # 默认 HTTP 80；Cloudflare 回源与 IP 直连均无需端口
+    cap_add:
+      - NET_BIND_SERVICE     # 非 root 进程（app 用户）绑定 80 端口所需内核能力
+    # 使用命名卷（named volumes）：首次挂载自动继承镜像内目录属主（app:app），
+    # 彻底避免 bind mount 宿主机目录 root 属主导致 SQLite 无法建库的问题
+    volumes:
+      - video-data:/app/data                 # SQLite 数据库（重启不丢失）
+      - video-downloads:/app/downloads       # 下载文件
+      - video-cookies:/app/cookies_store     # 平台 Cookie（加密存储）
+    # 服务器本地 .env：密钥 + Spug 邮件推送配置（.env 被 .gitignore 忽略，不进 Git 仓库）
+    env_file:
+      - .env
+    environment:
+      - TZ=Asia/Shanghai
+      - APP_ENV=${APP_ENV:-production}
+      - APP_ADDR=:80
+      - DATABASE_URL=./data/app.db
+      - DOWNLOAD_DIR=./downloads
+      - COOKIE_DIR=./cookies_store
+      # 邮件限流 Redis：compose 编排内固定指向 redis 服务（容器内 127.0.0.1 是容器自身，不可用）；
+      # 本机 go run 部署时请在 .env 中配置 REDIS_URL=redis://127.0.0.1:6379
+      - REDIS_URL=redis://redis:6379
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://127.0.0.1:80/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  # Redis：邮件发送限流计数（同一邮箱 60s 冷却 / 每小时 6 次 / 同一 IP 限流）
+  redis:
+    image: redis:7-alpine
+    container_name: video-downloader-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "no", "--save", ""]
+    volumes:
+      - redis-data:/data
+
+  # 开发环境无需本地邮箱服务：验证码直接输出到服务日志（生产使用 Spug 推送助手邮件验证码）
+
+# 持久化卷（应用重启/升级不丢失；备份见 README「数据库备份」）
+volumes:
+  video-data:
+  video-downloads:
+  video-cookies:
+  redis-data:

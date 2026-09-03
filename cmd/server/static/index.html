@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Downloader</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="stylesheet" href="/style.css?v=3">
+</head>
+<body>
+    <div class="app">
+        <!-- 顶部导航 -->
+        <header class="header">
+            <div class="brand">
+                <span class="brand-name">Video Downloader</span>
+                <span class="brand-sub">多平台视频下载</span>
+            </div>
+            <nav class="nav" id="nav">
+                <!-- 由 JS 渲染：未登录显示"注册/登录"，已登录显示功能入口 -->
+            </nav>
+        </header>
+
+        <!-- 主内容 -->
+        <main class="main">
+            <!-- ============ 下载视图（保留原有体验）============ -->
+            <section class="panel" id="inputPanel">
+                <div class="field">
+                    <label class="field-label" for="url">视频链接</label>
+                    <input id="url" class="field-input" placeholder="粘贴链接或分享文案"
+                           autocomplete="off" spellcheck="false">
+                    <p class="field-hint">支持哔哩哔哩、抖音、小红书、Likee、Instagram、YouTube</p>
+                </div>
+
+                <button id="startBtn" class="btn-primary">
+                    <span class="btn-text">开始下载</span>
+                </button>
+
+                <div class="cookie-section">
+                    <div class="field cookie-field">
+                        <div class="field-header">
+                            <label class="field-label" for="cookie">Cookie（可选，高清视频需要）</label>
+                            <span id="cookieStatus" class="cookie-status"></span>
+                        </div>
+                        <textarea id="cookie" class="field-input field-textarea"
+                                  placeholder="粘贴 Cookie，将自动识别所属平台并加密保存"
+                                  spellcheck="false"></textarea>
+                        <p class="field-hint">输入后自动识别平台并加密保存；已保存的 Cookie 仅显示脱敏前缀</p>
+                        <div class="cookie-manual" id="cookieManual" style="display:none;">
+                            <select id="cookiePlatformSelect" class="cookie-select"></select>
+                            <button type="button" id="cookieSaveBtn" class="btn-secondary btn-small">保存</button>
+                        </div>
+                    </div>
+
+                    <div class="cookie-saved" id="cookieSaved" style="display:none;">
+                        <div class="cookie-saved-header">
+                            <span class="cookie-saved-title">已保存的平台 Cookie</span>
+                            <div class="cookie-batch">
+                                <label class="check-all">
+                                    <input type="checkbox" id="checkAll"> 全选
+                                </label>
+                                <button type="button" id="deleteSelectedBtn" class="text-btn text-btn-danger">删除选中</button>
+                            </div>
+                        </div>
+                        <div class="cookie-chips" id="cookieChips"></div>
+                        <p class="field-hint">点击平台名可重新粘贴覆盖，点击 ✕ 或勾选后删除</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="panel panel-progress" id="progressPanel" hidden>
+                <div class="progress-header">
+                    <span class="progress-title">下载进度</span>
+                    <span class="progress-percent" id="progressPercent">0%</span>
+                </div>
+                <div class="progress-track">
+                    <div class="progress-bar" id="progressBar"></div>
+                </div>
+                <div class="progress-info">
+                    <div class="info-item"><span class="info-label">标题</span><span class="info-value" id="title">—</span></div>
+                    <div class="info-item"><span class="info-label">平台</span><span class="info-value" id="platform">—</span></div>
+                    <div class="info-item"><span class="info-label">视频流</span><span class="info-value" id="videoFmt">—</span></div>
+                    <div class="info-item"><span class="info-label">音频流</span><span class="info-value" id="audioFmt">—</span></div>
+                    <div class="info-item info-item-full"><span class="info-label">状态</span><span class="info-value" id="stage">—</span></div>
+                </div>
+                <div class="message" id="statusMsg"></div>
+                <div class="actions-wrap">
+                    <div class="actions" id="actionsArea" style="display:none;">
+                        <a id="downloadLink" class="btn-primary btn-download" href="#">保存到本地</a>
+                    </div>
+                    <div class="actions">
+                        <button id="resetBtn" class="btn-secondary">新建任务</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============ 认证视图 ============ -->
+            <section class="panel" id="view-auth" hidden>
+                <div class="auth-tabs">
+                    <button id="tabLogin" class="auth-tab active">登录</button>
+                    <button id="tabRegister" class="auth-tab">注册</button>
+                </div>
+
+                <div id="loginForm">
+                    <div class="field">
+                        <label class="field-label" for="loginEmail">邮箱</label>
+                        <input id="loginEmail" type="email" class="field-input" placeholder="user@example.com" autocomplete="email">
+                    </div>
+                    <div class="field">
+                        <label class="field-label" for="loginPassword">密码</label>
+                        <input id="loginPassword" type="password" class="field-input" placeholder="••••••••" autocomplete="current-password">
+                    </div>
+                    <button id="loginBtn" class="btn-primary">登录</button>
+                    <div class="verify-help">
+                        <button id="gotoVerifyBtn" class="text-btn">已有验证码？前往邮箱验证</button>
+                        <button id="forgotPwdBtn" class="text-btn">忘记密码？</button>
+                    </div>
+                    <p class="field-hint" id="loginMsg"></p>
+                </div>
+
+                <!-- 忘记密码 / 重置密码（邮箱 + 验证码 + 新密码） -->
+                <div id="pwdResetForm" hidden>
+                    <p class="field-hint" id="pwdResetTip">请输入注册邮箱，点击发送重置验证码</p>
+                    <div class="field">
+                        <label class="field-label" for="resetEmail">邮箱</label>
+                        <input id="resetEmail" type="email" class="field-input" placeholder="user@example.com" autocomplete="email">
+                    </div>
+                    <div class="field">
+                        <label class="field-label" for="resetCode">验证码</label>
+                        <input id="resetCode" class="field-input code-input" inputmode="numeric"
+                               maxlength="6" placeholder="请输入6位数验证码" autocomplete="one-time-code" spellcheck="false">
+                    </div>
+                    <div class="field">
+                        <label class="field-label" for="resetPw">新密码</label>
+                        <input id="resetPw" type="password" class="field-input" placeholder="至少 8 位，包含字母和数字" autocomplete="new-password">
+                    </div>
+                    <div class="field">
+                        <label class="field-label" for="resetPwConfirm">确认新密码</label>
+                        <input id="resetPwConfirm" type="password" class="field-input" placeholder="再次输入新密码" autocomplete="new-password">
+                    </div>
+                    <button id="sendResetCodeBtn" class="btn-secondary">发送重置验证码</button>
+                    <div class="verify-help">
+                        <span id="resetCountdown" class="field-hint"></span>
+                    </div>
+                    <br>
+                    <button id="resetPwdBtn" class="btn-primary">重置密码</button>
+                    <div class="verify-help">
+                        <button id="backToLoginBtn" class="text-btn">返回登录</button>
+                    </div>
+                    <p class="field-hint" id="pwdResetMsg"></p>
+                </div>
+
+                <div id="registerForm" hidden>
+                    <div class="field">
+                        <label class="field-label" for="regEmail">邮箱</label>
+                        <input id="regEmail" type="email" class="field-input" placeholder="user@example.com" autocomplete="email">
+                    </div>
+                    <div class="field">
+                        <label class="field-label" for="regPassword">密码</label>
+                        <input id="regPassword" type="password" class="field-input" placeholder="至少 8 位，包含字母和数字" autocomplete="new-password">
+                    </div>
+                    <div class="field">
+                        <label class="field-label" for="regConfirm">确认密码</label>
+                        <input id="regConfirm" type="password" class="field-input" placeholder="再次输入密码" autocomplete="new-password">
+                    </div>
+                    <button id="registerBtn" class="btn-primary">注册</button>
+                    <p class="field-hint" id="registerMsg"></p>
+                </div>
+
+                <!-- 验证码输入（注册/重发/管理员自举均从此进入） -->
+                <div id="verifyCodeForm" hidden>
+                    <p class="field-hint" id="verifyCodeTip">验证码已发送至您的邮箱</p>
+                    <div class="field">
+                        <label class="field-label" for="verifyEmail">邮箱</label>
+                        <input id="verifyEmail" type="email" class="field-input" placeholder="输入注册邮箱" autocomplete="email">
+                    </div>
+                    <div class="field">
+                        <label class="field-label" for="verifyCode">验证码</label>
+                        <input id="verifyCode" class="field-input code-input" inputmode="numeric"
+                               maxlength="6" placeholder="请输入6位数验证码" autocomplete="one-time-code"
+                               spellcheck="false">
+                    </div>
+                    <button id="verifyCodeBtn" class="btn-primary">验证邮箱</button>
+                    <div class="verify-help">
+                        <button id="resendCodeBtn" class="text-btn">未收到验证码？重新发送</button>
+                        <span id="resendCountdown" class="field-hint"></span>
+                    </div>
+                    <p class="field-hint" id="verifyMsg"></p>
+                </div>
+
+                <!-- 验证结果提示 -->
+                <div id="verifyResult" hidden>
+                    <div class="verify-box">
+                        <p id="verifyResultMsg"></p>
+                        <button id="gotoLoginBtn" class="btn-secondary">前往登录</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============ 用户中心 ============ -->
+            <section class="panel" id="view-user" hidden>
+                <h2 class="panel-title">用户中心</h2>
+                <div class="user-info" id="userInfo"><!-- JS 渲染 --></div>
+                <!-- 邮箱验证（未验证用户显示；点击发送验证码→输入→完成验证） -->
+                <div class="panel-sub" id="verifySection" hidden>
+                    <h3>邮箱验证</h3>
+                    <p class="field-hint" id="verifyTip">验证码将发送至您的邮箱，验证后即可使用会员与下载功能。</p>
+                    <div class="field">
+                        <label class="field-label" for="centerVerifyCode">验证码</label>
+                        <input id="centerVerifyCode" class="field-input code-input" inputmode="numeric"
+                               maxlength="6" placeholder="请输入6位数验证码" autocomplete="one-time-code" spellcheck="false">
+                    </div>
+                    <button id="sendCenterVerifyBtn" class="btn-secondary">发送验证码</button>
+                    <span id="centerVerifyCountdown" class="field-hint"></span>
+                    <br>
+                    <button id="centerVerifyBtn" class="btn-primary">完成验证</button>
+                    <p class="field-hint" id="centerVerifyMsg"></p>
+                </div>
+                <div class="panel-sub">
+                    <h3>修改密码（需邮箱验证码）</h3>
+                    <div class="field">
+                        <label class="field-label" for="changeCode">邮箱验证码</label>
+                        <input id="changeCode" class="field-input" inputmode="numeric" maxlength="6"
+                               placeholder="请输入6位数验证码" autocomplete="one-time-code" spellcheck="false">
+                    </div>
+                    <div class="field">
+                        <label class="field-label" for="newPw">新密码</label>
+                        <input id="newPw" type="password" class="field-input" placeholder="至少 8 位，包含字母和数字" autocomplete="new-password">
+                    </div>
+                    <button id="sendChangeCodeBtn" class="btn-secondary">发送验证码到当前邮箱</button>
+                    <span id="changeCodeCountdown" class="field-hint"></span>
+                    <br>
+                    <button id="changePwBtn" class="btn-secondary">修改密码</button>
+                    <p class="field-hint" id="userMsg"></p>
+                </div>
+                <div class="panel-sub">
+                    <h3>邮件测试（诊断 Spug 邮件推送）</h3>
+                    <p class="field-hint">注册收不到验证码时，点击下方按钮向当前邮箱发送测试邮件；失败时返回具体原因（模板编码/IP 白名单/邮件余额）。</p>
+                    <button id="emailTestBtn" class="btn-secondary">发送测试邮件</button>
+                    <p class="field-hint" id="emailTestMsg"></p>
+                </div>
+                <div class="panel-sub">
+                    <h3>我的订单</h3>
+                    <div id="orderList" class="order-list"><!-- JS 渲染 --></div>
+                </div>
+            </section>
+
+            <!-- ============ 会员套餐 ============ -->
+            <section class="panel" id="view-plans" hidden>
+                <h2 class="panel-title">会员套餐</h2>
+                <p class="field-hint">金额、时长与权益由服务端确定，支付成功后自动开通，未验证邮箱用户无法下单</p>
+                <div id="planList" class="plan-list"><!-- JS 渲染 --></div>
+                <div class="verify-help" id="planMsg"></div>
+            </section>
+
+            <!-- ============ 任务列表 ============ -->
+            <section class="panel" id="view-tasks" hidden>
+                <h2 class="panel-title">我的下载任务</h2>
+                <div id="taskList" class="task-list"><!-- JS 渲染 --></div>
+            </section>
+
+            <!-- ============ 管理员后台 ============ -->
+            <section class="panel" id="view-admin" hidden>
+                <h2 class="panel-title">管理员后台</h2>
+                <div class="admin-tabs">
+                    <button class="admin-tab active" data-atab="users">用户</button>
+                    <button class="admin-tab" data-atab="orders">订单</button>
+                    <button class="admin-tab" data-atab="plans">套餐</button>
+                    <button class="admin-tab" data-atab="tasks">下载任务</button>
+                    <button class="admin-tab" data-atab="payments">支付事件</button>
+                    <button class="admin-tab" data-atab="audit">审计日志</button>
+                    <button class="admin-tab" data-atab="email">邮件</button>
+                </div>
+                <div id="admin-content" class="admin-content"><!-- JS 渲染 --></div>
+            </section>
+        </main>
+    </div>
+
+    <!-- 顶部提示弹窗（toast） -->
+    <div id="toast" class="toast" hidden></div>
+
+    <script src="/script.js"></script>
+</body>
+</html>

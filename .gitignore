@@ -1,0 +1,35 @@
+# Go
+*.exe
+*.dll
+*.so
+*.dylib
+vendor/
+
+# 测试
+*.test
+*.out
+
+# 运行时数据（数据库 / 下载 / Cookie / 证书 / 密钥）
+data/
+downloads/
+cookies_store/
+certs/
+.env
+*.log
+*.pid
+*.db
+*.db-wal
+*.db-shm
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 二进制
+/video-downloader
